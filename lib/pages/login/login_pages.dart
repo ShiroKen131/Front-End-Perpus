@@ -3,7 +3,7 @@ import '../register/register_pages.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../book_page.dart';
+import 'package:bukuxirplb/pages/book_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -12,184 +12,77 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-
-
-
-
-
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
-Future<void> loginUser() async {
-  final String email = _nameController.text;
-  final String password = _passwordController.text;
-
-  setState(() {
-    _isLoading = true;
-  });
-
-  // Untuk sementara, gunakan simulasi login berhasil untuk testing navigasi
-  bool useSimulatedLogin = true; // Set ke false jika API sudah tersedia
-
-  if (useSimulatedLogin) {
-    // Simulasi network delay
-    await Future.delayed(Duration(seconds: 1));
-    
-    setState(() {
-      _isLoading = false;
-    });
-    
-    // Simpan token dummy
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', 'dummy_token_for_testing');
-    
-    // Navigasi ke BookPage
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => BookPage()),
-    );
-    
-    return;
-  }
-
-  // Kode asli untuk menghubungi API
-  try {
-    print('Trying to connect to API...');
-    const String apiUrl = 'http://127.0.0.1:8000/api/auth/login'; 
-    
-    final response = await http.post(
-      Uri.parse(apiUrl),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
-    ).timeout(Duration(seconds: 10)); // Tambahkan timeout
+  Future<void> loginUser() async {
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
     });
 
-    print('STATUS: ${response.statusCode}');
-    print('RESPONSE BODY: ${response.body}');
+    try {
+      const String apiUrl = 'http://127.0.0.1:8000/api/auth/login'; // Adjust for emulator/device
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'email': _nameController.text,
+          'password': _passwordController.text,
+        }),
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['success'] == true) {
-        // Simpan token
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', data['token']);
-        
-        // Navigasi ke BookPage
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => BookPage()),
-        );
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == true) {
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('token', data['token']);
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const BookPage()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data['message'] ?? 'Login gagal')),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? 'Login gagal')),
+          SnackBar(content: Text('Login gagal: ${response.statusCode}')),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login gagal: ${response.statusCode}')),
-      );
-    }
-  } catch (e) {
-    print('Login error: $e');
-    setState(() {
-      _isLoading = false;
-    });
-    
-    // Tampilkan pesan error dan panduannya
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Koneksi Gagal'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Tidak dapat terhubung ke server API: $e'),
-            SizedBox(height: 10),
-            Text('Pastikan:'),
-            Text('1. Server API berjalan di http://127.0.0.1:8000'),
-            Text('2. Tidak ada masalah jaringan'),
-            Text('3. CORS diaktifkan jika menjalankan di web'),
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Koneksi Gagal'),
+          content: const Text('Tidak dapat terhubung ke server. Pastikan server berjalan dan jaringan stabil.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text('OK'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Gunakan simulasi login untuk testing UI
-              loginWithSimulation();
-            },
-            child: Text('Gunakan Mode Simulasi'),
-          ),
-        ],
-      ),
-    );
+      );
+    }
   }
-}
-
-// Fungsi tambahan untuk simulasi login
-Future<void> loginWithSimulation() async {
-  setState(() {
-    _isLoading = true;
-  });
-  
-  // Simulasi delay jaringan
-  await Future.delayed(Duration(seconds: 1));
-  
-  setState(() {
-    _isLoading = false;
-  });
-  
-  // Simpan token dummy
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  await prefs.setString('token', 'dummy_token_for_testing');
-  
-  // Navigasi ke BookPage
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (context) => BookPage()),
-  );
-}
-
-@override
-void initState() {
-  super.initState();
-  // Cek apakah sudah login
-  checkLoginStatus();
-}
-
-Future<void> checkLoginStatus() async {
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  final String? token = prefs.getString('token');
-  
-  if (token != null) {
-    // Jika sudah ada token, langsung navigasi ke BookPage
-    print('Token found, navigating to BookPage');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => BookPage()),
-    );
-  }
-}
-
 
   @override
   void dispose() {
@@ -319,23 +212,14 @@ Future<void> checkLoginStatus() async {
                         ),
                         elevation: 3,
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Login',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),

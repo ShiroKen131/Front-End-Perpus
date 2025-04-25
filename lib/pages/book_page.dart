@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login/login_pages.dart'; // Sesuaikan path
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -25,10 +23,31 @@ class _BookPageState extends State<BookPage> {
     fetchBooks();
   }
 
+  // ... other code ...
+
+  Future<void> logout() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.remove('token');
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    } catch (e) {
+      print('Error during logout: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal logout: $e')),
+      );
+    }
+
+    // ... other code ...
+  }
+
   Future<void> getUserInfo() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? token = prefs.getString('token');
-    
+
     if (token != null) {
       try {
         final response = await http.get(
@@ -38,7 +57,7 @@ class _BookPageState extends State<BookPage> {
             'Accept': 'application/json',
           },
         );
-        
+
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           setState(() {
@@ -55,23 +74,25 @@ class _BookPageState extends State<BookPage> {
     setState(() {
       isLoading = true;
     });
-    
+
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       final String? token = prefs.getString('token');
-      
+
       final response = await http.get(
-        Uri.parse('http://127.0.0.1:8000/api/books'),
+        Uri.parse('http://127.0.0.1:8000/api/buku'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
         },
       );
-      
+
+      print('Response buku: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          books = data['data'] ?? [];
+          books = data['buku'] ?? [];
           isLoading = false;
         });
       } else {
@@ -88,23 +109,6 @@ class _BookPageState extends State<BookPage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
-      );
-    }
-  }
-
-   Future<void> logout() async {
-    try {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.remove('token');
-      
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
-    } catch (e) {
-      print('Error during logout: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal logout: $e')),
       );
     }
   }
@@ -203,106 +207,111 @@ class _BookPageState extends State<BookPage> {
           ],
         ),
       ),
-      body: isLoading 
-        ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF9CC4)))
-        : Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFD6E5),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF9CC4)))
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD6E5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.menu_book,
+                            size: 40,
+                            color: Color(0xFFFF9CC4),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.menu_book,
-                          size: 40,
-                          color: Color(0xFFFF9CC4),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Selamat Datang di',
-                            style: TextStyle(
-                              fontSize: 14,
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Selamat Datang di',
+                              style: TextStyle(
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                          const Text(
-                            'Perpustakaan Digital',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                            const Text(
+                              'Perpustakaan Digital',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            'Ada ${books.length} buku tersedia untuk Anda',
-                            style: const TextStyle(
-                              fontSize: 14,
+                            const SizedBox(height: 5),
+                            Text(
+                              'Ada ${books.length} buku tersedia untuk Anda',
+                              style: const TextStyle(
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Buku Terbaru',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: books.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Belum ada buku tersedia',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
-                          ),
+                          ],
                         ),
-                      )
-                    : GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.7,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                        itemCount: books.length,
-                        itemBuilder: (context, index) {
-                          final book = books[index];
-                          return BookCard(
-                            title: book['title'] ?? 'Tidak ada judul',
-                            author: book['author'] ?? 'Tidak ada penulis',
-                            coverUrl: book['cover_url'] ?? '',
-                            onTap: () {
-                              // Navigator untuk detail buku
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Buku Terbaru',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: books.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Belum ada buku tersedia',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : GridView.builder(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.7,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                            itemCount: books.length,
+                            itemBuilder: (context, index) {
+                              final book = books[index];
+                              return BookCard(
+                                title: book['judul_buku'] ?? 'Tidak ada judul',
+                                author:
+                                    book['pengarang'] ?? 'Tidak ada penulis',
+                                year: book['tahun_terbit']?.toString() ?? 'Tidak diketahui',
+                                coverUrl: book['cover_url'] ??
+                                    '', // ganti kalau field-nya bukan 'cover_url'
+                                onTap: () {
+                                  // Navigator untuk detail buku
+                                },
+                              );
                             },
-                          );
-                        },
-                      ),
-                ),
-              ],
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Action untuk mencari buku
@@ -317,6 +326,7 @@ class _BookPageState extends State<BookPage> {
 class BookCard extends StatelessWidget {
   final String title;
   final String author;
+  final String year;
   final String coverUrl;
   final VoidCallback onTap;
 
@@ -324,6 +334,7 @@ class BookCard extends StatelessWidget {
     Key? key,
     required this.title,
     required this.author,
+    required this.year,
     required this.coverUrl,
     required this.onTap,
   }) : super(key: key);
@@ -333,59 +344,43 @@ class BookCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        color: Colors.pink[50],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  image: DecorationImage(
-                    image: coverUrl.isNotEmpty
-                        ? NetworkImage(coverUrl)
-                        : const AssetImage('assets/book_placeholder.png') as ImageProvider,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: coverUrl.isEmpty
-                    ? const Center(
-                        child: Icon(
-                          Icons.menu_book,
-                          size: 50,
-                          color: Color(0xFFFF9CC4),
-                        ),
+            // Cover buku
+            Container(
+              height: 120,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
+                image: coverUrl.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(coverUrl),
+                        fit: BoxFit.cover,
                       )
                     : null,
+                color: Colors.pink[100],
               ),
+              child: coverUrl.isEmpty
+                  ? const Center(
+                      child: Icon(Icons.book, color: Colors.white, size: 40))
+                  : null,
             ),
+            // Detail buku
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    author,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(title,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(author, style: const TextStyle(color: Colors.grey)),
+                  Text('Tahun: $year',
+                      style: const TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
