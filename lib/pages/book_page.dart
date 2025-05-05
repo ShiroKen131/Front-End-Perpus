@@ -22,9 +22,6 @@ class _BookPageState extends State<BookPage> {
     getUserInfo();
     fetchBooks();
   }
-
-  // ... other code ...
-
   Future<void> logout() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
